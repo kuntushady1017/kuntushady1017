@@ -10,22 +10,22 @@ from rest_framework.parsers import MultiPartParser, FormParser, FileUploadParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from django.db.models import Avg, Count, Sum
 
 name = ('X', 'Y', 'x', 'y')
-header = 'Institution-Name'
+header = 'HTTP_INSTITUTION_NAME'
 
 @api_view(['POST'])
 @parser_classes([FormParser, MultiPartParser, FileUploadParser])
 @permission_classes([IsAuthenticated])
 def transaction_post(request):
     if request.method == 'POST':
-        print(request.data, request.headers)
-        myheader = request.headers['Institution-Name']
-        if header not in request.headers:
+        print(request.headers, request.META)
+        if request.META.get(header) == None:
             msg = str("Please in your header add a variable named institution-name with your company letter")
             return Response({'Failure': msg, 'status_ code': status.HTTP_428_PRECONDITION_REQUIRED}, status.HTTP_428_PRECONDITION_REQUIRED) 
-        elif myheader not in name:
-            msg = str("Please in your header write the company letter given X or Y or x or y")
+        elif request.headers['Institution-Name'] not in name:
+            msg = str("Please in your header parameters institution-name write the letter given X or Y or x or y of the company")
             return Response({'Failure': msg, 'status_ code': status.HTTP_428_PRECONDITION_REQUIRED}, status.HTTP_428_PRECONDITION_REQUIRED)
         else:
             file_serializer = FileSerializer(data=request.data)
@@ -75,10 +75,17 @@ def transaction_post(request):
                 else:
                     msg = str("The file sent has no extesion of .csv or .xlsx")
                     return Response({"Failure":msg, "status code": status.HTTP_415_UNSUPPORTED_MEDIA_TYPE}, status.HTTP_400_BAD_REQUEST)
+                file_serializer.save()
                 msg = str("Uploaded successful")
-        return Response({"data": file_serializer.data, "message":msg}, status.HTTP_200_OK)    
+        return Response({"data": file_serializer.data, "message":msg}, status.HTTP_200_OK)
+    msg2 = str("Uploaded failed")
+    return Response({"data": file_serializer.errors, "message": msg2}, status.HTTP_400_BAD_REQUEST)    
+
 
 def index(request):
-    queryset = BankTransaction.objects.distinct()
-    print(queryset)
+    queryset = BankTransaction.objects.all()
+    partners_x = PartnersTransaction.objects.all().filter(institution__icontains='x').filter(institution__contains='X')
+    
+    
+     
     return HttpResponse(request, STATUS)
